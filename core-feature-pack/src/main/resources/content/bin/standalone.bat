@@ -15,6 +15,7 @@ set DEBUG_MODE=false
 set DEBUG_PORT_VAR=8787
 rem Set to all parameters by default
 set "SERVER_OPTS=%*"
+set JAVA_9_PLUS=
 
 
 if NOT "x%DEBUG%" == "x" (
@@ -219,6 +220,10 @@ if "x%JBOSS_CONFIG_DIR%" == "x" (
   set  "JBOSS_CONFIG_DIR=%JBOSS_BASE_DIR%\configuration"
 )
 
+setlocal EnableDelayedExpansion
+call "!DIRNAME!common.bat" :setJava9_plus
+setlocal DisableDelayedExpansion
+
 if not "%PRESERVE_JAVA_OPTS%" == "true" (
     if "%GC_LOG%" == "true" (
       rem Add rotating GC logs, if supported, and not already defined
@@ -232,14 +237,25 @@ if not "%PRESERVE_JAVA_OPTS%" == "true" (
         move /y "%JBOSS_LOG_DIR%\gc.log.4" "%JBOSS_LOG_DIR%\backupgc.log.4" > nul 2>&1
         move /y "%JBOSS_LOG_DIR%\gc.log.*.current" "%JBOSS_LOG_DIR%\backupgc.log.current" > nul 2>&1
 
-        "%JAVA%" -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=3M -Xloggc:"%JBOSS_LOG_DIR%\gc.log" -XX:-TraceClassUnloading -version > nul 2>&1
-        if not errorlevel == 1 (
-          if not exist "%JBOSS_LOG_DIR" > nul 2>&1 (
-            mkdir "%JBOSS_LOG_DIR%"
-          )
-		set JAVA_OPTS=%JAVA_OPTS% -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -Xloggc:"%JBOSS_LOG_DIR%\gc.log" -XX:GCLogFileSize=3M -XX:-TraceClassUnloading
+            setlocal EnableDelayedExpansion
+            if "!JAVA_9_PLUS!" == "true" (
+                "%JAVA%" -Xlog:gc*:file="%JBOSS_LOG_DIR%\gc.log":time,uptimemillis:filecount=5,filesize=3M -version > nul 2>&1
+            ) else (
+                "%JAVA%" -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=3M -Xloggc:"%JBOSS_LOG_DIR%\gc.log" -XX:-TraceClassUnloading -version > nul 2>&1
+            )
+            if not errorlevel == 1 (
+                if not exist "%JBOSS_LOG_DIR" > nul 2>&1 (
+                    mkdir "%JBOSS_LOG_DIR%"
+                )
+
+                if "!JAVA_9_PLUS!" == "true" (
+                    set JAVA_OPTS=%JAVA_OPTS% -Xlog:gc*:file="%JBOSS_LOG_DIR%\gc.log":time,uptimemillis:filecount=5,filesize=3M
+                } else {
+                    set JAVA_OPTS=%JAVA_OPTS% -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -Xloggc:"%JBOSS_LOG_DIR%\gc.log" -XX:GCLogFileSize=3M -XX:-TraceClassUnloading
+                )
+            )
         )
-       )
+        setlocal DisableDelayedExpansion
     )
 
     rem set default modular jvm parameters
