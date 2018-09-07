@@ -1,11 +1,11 @@
 #!/bin/sh -x
 
-setJava9_plus() {
-  $JAVA --add-modules=java.se -version > /dev/null 2>&1 && JAVA_9_PLUS=true || JAVA_9_PLUS=false
+setModularJvm() {
+  $JAVA --add-modules=java.se -version > /dev/null 2>&1 && MODULAR_JDK=true || MODULAR_JDK=false
 }
 
 setDefaultModularJvmOptions() {
-  if [ "$JAVA_9_PLUS" = "true" ]; then
+  if [ "$MODULAR_JDK" = "true" ]; then
     DEFAULT_MODULAR_JVM_OPTIONS=`echo $1 | $GREP "\-\-add\-modules"`
     if [ "x$DEFAULT_MODULAR_JVM_OPTIONS" = "x" ]; then
       # Set default modular jdk options

@@ -15,7 +15,6 @@ set DEBUG_MODE=false
 set DEBUG_PORT_VAR=8787
 rem Set to all parameters by default
 set "SERVER_OPTS=%*"
-set JAVA_9_PLUS=
 
 
 if NOT "x%DEBUG%" == "x" (
@@ -221,13 +220,13 @@ if "x%JBOSS_CONFIG_DIR%" == "x" (
 )
 
 setlocal EnableDelayedExpansion
-call "!DIRNAME!common.bat" :setJava9_plus
+call "!DIRNAME!common.bat" :setModularJvm
 setlocal DisableDelayedExpansion
 
-if not "%PRESERVE_JAVA_OPTS%" == "true" (
+if not "%PRESERVE_JAVA_OPT%" == "true" (
     if "%GC_LOG%" == "true" (
       rem Add rotating GC logs, if supported, and not already defined
-      echo "%JAVA_OPTS%" | findstr /I "\-verbose:gc" > nul
+      echo "%JAVA_OPTS%" | findstr /I "\-Xlog:*gc" > nul
       if errorlevel == 1 (
         rem Back up any prior logs
         move /y "%JBOSS_LOG_DIR%\gc.log.1" "%JBOSS_LOG_DIR%\backupgc.log.1" > nul 2>&1
@@ -238,21 +237,18 @@ if not "%PRESERVE_JAVA_OPTS%" == "true" (
         move /y "%JBOSS_LOG_DIR%\gc.log.*.current" "%JBOSS_LOG_DIR%\backupgc.log.current" > nul 2>&1
 
             setlocal EnableDelayedExpansion
-            if "!JAVA_9_PLUS!" == "true" (
-                "%JAVA%" -Xlog:gc*:file="%JBOSS_LOG_DIR%\gc.log":time,uptimemillis:filecount=5,filesize=3M -version > nul 2>&1
+            if "!MODULAR_JDK!" == "true" (
+                set TMP_PARAM=-Xlog:gc*:file="\"%JBOSS_LOG_DIR%\gc.log\"":time,uptimemillis:filecount=5,filesize=3M
             ) else (
-                "%JAVA%" -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=3M -Xloggc:"%JBOSS_LOG_DIR%\gc.log" -XX:-TraceClassUnloading -version > nul 2>&1
+                set TMP_PARAM=-Xloggc:"\"%JBOSS_LOG_DIR%\gc.log\"" -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=3M -XX:-TraceClassUnloading
             )
+            "%JAVA%" !TMP_PARAM! -version > nul 2>&1
             if not errorlevel == 1 (
-                if not exist "%JBOSS_LOG_DIR" > nul 2>&1 (
+                if not exist "%JBOSS_LOG_DIR%" > nul 2>&1 (
                     mkdir "%JBOSS_LOG_DIR%"
                 )
 
-                if "!JAVA_9_PLUS!" == "true" (
-                    set JAVA_OPTS=%JAVA_OPTS% -Xlog:gc*:file="%JBOSS_LOG_DIR%\gc.log":time,uptimemillis:filecount=5,filesize=3M
-                } else {
-                    set JAVA_OPTS=%JAVA_OPTS% -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -Xloggc:"%JBOSS_LOG_DIR%\gc.log" -XX:GCLogFileSize=3M -XX:-TraceClassUnloading
-                )
+               set JAVA_OPTS="%JAVA_OPTS%" !TMP_PARAM!
             )
         )
         setlocal DisableDelayedExpansion
@@ -260,7 +256,7 @@ if not "%PRESERVE_JAVA_OPTS%" == "true" (
 
     rem set default modular jvm parameters
     setlocal EnableDelayedExpansion
-    call "!DIRNAME!common.bat" :setDefaultModularJvmOptions "!JAVA_OPTS!"
+    call "!DIRNAME!common.bat" :setDefaultModularJvmOptions !JAVA_OPTS!
     set "JAVA_OPTS=!JAVA_OPTS! !DEFAULT_MODULAR_JVM_OPTIONS!"
     setlocal DisableDelayedExpansion
 )

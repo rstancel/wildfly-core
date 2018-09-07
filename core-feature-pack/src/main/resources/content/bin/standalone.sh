@@ -262,12 +262,12 @@ if [ "$PRESERVE_JAVA_OPTS" != "true" ]; then
         fi
     fi
 
-    # Set Java 9+ variable which will be used later
-    setJava9_plus
+    # Set flag if JVM is modular
+    setModularJvm
 
     if [ "$GC_LOG" = "true" ]; then
         # Enable rotating GC logs if the JVM supports it and GC logs are not already enabled
-        NO_GC_LOG_ROTATE=`echo $JAVA_OPTS | $GREP "\-verbose:gc"`
+        NO_GC_LOG_ROTATE=`echo $JAVA_OPTS | $GREP "\-Xlog\:\?gc"`
         if [ "x$NO_GC_LOG_ROTATE" = "x" ]; then
             # backup prior gc logs
             mv -f "$JBOSS_LOG_DIR/gc.log.0" "$JBOSS_LOG_DIR/backupgc.log.0" >/dev/null 2>&1
@@ -276,11 +276,13 @@ if [ "$PRESERVE_JAVA_OPTS" != "true" ]; then
             mv -f "$JBOSS_LOG_DIR/gc.log.3" "$JBOSS_LOG_DIR/backupgc.log.3" >/dev/null 2>&1
             mv -f "$JBOSS_LOG_DIR/gc.log.4" "$JBOSS_LOG_DIR/backupgc.log.4" >/dev/null 2>&1
             mv -f "$JBOSS_LOG_DIR"/gc.log.*.current "$JBOSS_LOG_DIR/backupgc.log.current" >/dev/null 2>&1
-            if [ "$JAVA_9_PLUS" = "true" ]; then
-                "$JAVA" $JVM_OPTVERSION -Xlog:gc*:file=$JBOSS_LOG_DIR/gc.log:time,uptimemillis:filecount=5,filesize=3M
+            if [ "$MODULAR_JDK" = "true" ]; then
+                TMP_PARAM="-Xlog:gc*:file=$JBOSS_LOG_DIR/gc.log:time,uptimemillis:filecount=5,filesize=3M"
             else
-                "$JAVA" $JVM_OPTVERSION -Xloggc:"$JBOSS_LOG_DIR/gc.log" -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=3M -XX:-TraceClassUnloading -version >/dev/null 2>&1 && mkdir -p $JBOSS_LOG_DIR && PREPEND_JAVA_OPTS="$PREPEND_JAVA_OPTS -verbose:gc -Xloggc:\"$JBOSS_LOG_DIR/gc.log\" -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=3M -XX:-TraceClassUnloading"
+                TMP_PARAM="-Xloggc:$JBOSS_LOG_DIR/gc.log -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=3M -XX:-TraceClassUnloading"
             fi
+
+            "$JAVA" $JVM_OPTVERSION $TMP_PARAM -version >/dev/null 2>&1 && mkdir -p $JBOSS_LOG_DIR && PREPEND_JAVA_OPTS="$PREPEND_JAVA_OPTS $TMP_PARAM"
         fi
     fi
 
