@@ -276,6 +276,7 @@ if [ "$PRESERVE_JAVA_OPTS" != "true" ]; then
             mv -f "$JBOSS_LOG_DIR/gc.log.1" "$JBOSS_LOG_DIR/backupgc.log.1" >/dev/null 2>&1
             mv -f "$JBOSS_LOG_DIR/gc.log.2" "$JBOSS_LOG_DIR/backupgc.log.2" >/dev/null 2>&1
             mv -f "$JBOSS_LOG_DIR/gc.log.3" "$JBOSS_LOG_DIR/backupgc.log.3" >/dev/null 2>&1
+            mv -f "$JBOSS_LOG_DIR/gc.log.4" "$JBOSS_LOG_DIR/backupgc.log.4" >/dev/null 2>&1
             mv -f "$JBOSS_LOG_DIR"/gc.log.*.current "$JBOSS_LOG_DIR/backupgc.log.current" >/dev/null 2>&1
             if [ "$MODULAR_JDK" = "true" ]; then
                 TMP_PARAM="-Xlog:gc*:file=$JBOSS_LOG_DIR/gc.log:time,uptimemillis:filecount=5,filesize=3M"
